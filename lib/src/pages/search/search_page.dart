@@ -1,9 +1,10 @@
-import 'package:customsoft_exam/src/services/data/ads/ads_service.dart';
-import 'package:customsoft_exam/src/models/ads_response_model.dart';
+import 'package:customsoft_exam/src/models/product_model.dart';
+import 'package:customsoft_exam/src/services/provider/search_provider.dart';
 import 'package:customsoft_exam/src/widgets/product_card.dart';
 import 'package:customsoft_exam/src/widgets/search_widget.dart';
 import 'package:customsoft_exam/src/widgets/toggle_menu.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -15,34 +16,20 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   final ScrollController _scrollController = ScrollController();
 
-  AdsResponseModel? ads;
-  int initialItems = 5;
-  bool isLoading = true;
-
   @override
   void initState() {
     super.initState();
 
-    AdsService.getAllAds().then((event) => setState(() => ads = event));
+    SearchProvider provider =
+        Provider.of<SearchProvider>(context, listen: false);
 
+    provider.init();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
-        setState(() {
-          isLoading = false;
-          if (ads != null) {
-            isLoading = true;
-            if (initialItems + 5 <= ads!.items) {
-              initialItems += 5;
-            } else {
-              isLoading = false;
-            }
-          }
-        });
+        provider.nextItems();
       }
     });
-
-    
   }
 
   @override
@@ -53,6 +40,7 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    SearchProvider provider = Provider.of<SearchProvider>(context);
     return Scaffold(
       body: SafeArea(
         child: ListView(
@@ -65,49 +53,81 @@ class _SearchPageState extends State<SearchPage> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             SizedBox(height: 10),
-            ToggleMenu(
+            ToggleMenu<ProductType>(
               items: [
-                ToggleItem(title: "Autos", isSelected: true),
-                ToggleItem(title: "Inmuebles"),
-                ToggleItem(title: "Electrónicos"),
+                ToggleItem<ProductType>(
+                    title: "Autos",
+                    isSelected: provider.isFilterSelected(ProductType.auto),
+                    value: ProductType.auto),
+                ToggleItem<ProductType>(
+                    title: "Inmuebles",
+                    isSelected: provider.isFilterSelected(ProductType.home),
+                    value: ProductType.home),
+                ToggleItem<ProductType>(
+                    title: "Electrónicos",
+                    isSelected:
+                        provider.isFilterSelected(ProductType.electronic),
+                    value: ProductType.electronic),
               ],
+              onChanged: (value) {
+                Provider.of<SearchProvider>(context, listen: false)
+                    .updateFilterType(value.value as ProductType);
+              },
             ),
             SizedBox(height: 10),
             SearchWidget(),
             SizedBox(height: 10),
-            Builder(
-              builder: (context) {
-                if (ads == null) return Container();
-                int itemsCount =
-                    ads!.items > initialItems ? initialItems : ads!.items;
+            Visibility(
+              visible: provider.searchResult.isEmpty &&
+                  provider.searchValue.isNotEmpty,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text("No hay coincidencias con '${provider.searchValue}' "),
+                  ],
+                ),
+              ),
+            ),
+            Consumer<SearchProvider>(
+              builder: (context, provider, child) {
+                if (provider.productsToRender.isEmpty) return Container();
+
+                int itemsCount = provider.renderedProductsCount;
+
                 return ListView.builder(
                   shrinkWrap: true,
                   physics: NeverScrollableScrollPhysics(),
                   itemCount: itemsCount,
                   itemBuilder: (context, index) {
-                    return ProductCard(productModel: ads!.ads[index]);
+                    return ProductCard(
+                        productModel: provider.productsToRender[index]);
                   },
                 );
               },
             ),
             Visibility(
-              visible: isLoading,
-              child: Padding(
-                padding: EdgeInsets.all(30),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                  ],
+              visible: provider.searchValue.isEmpty,
+              child: Visibility(
+                visible: Provider.of<SearchProvider>(context).isloading,
+                child: Padding(
+                  padding: EdgeInsets.all(30),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                    ],
+                  ),
                 ),
-              ),
-              replacement: Padding(
-                padding: EdgeInsets.all(30),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text("Fin de los resultados"),
-                  ],
+                replacement: Padding(
+                  padding: EdgeInsets.all(30),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text("Fin de los resultados"),
+                    ],
+                  ),
                 ),
               ),
             ),

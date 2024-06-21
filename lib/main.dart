@@ -1,10 +1,12 @@
 import 'package:customsoft_exam/src/services/notifications/notification_manager.dart';
 import 'package:customsoft_exam/src/services/notifications/notifications_config.dart';
 import 'package:customsoft_exam/src/pages/menu_navigation_page.dart.dart';
+import 'package:customsoft_exam/src/services/provider/search_provider.dart';
 import 'package:customsoft_exam/src/theme/custom_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -13,7 +15,14 @@ void main() async {
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await NotificationsConfig.init(DefaultFirebaseOptions.currentPlatform);
 
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_)=> SearchProvider())
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {

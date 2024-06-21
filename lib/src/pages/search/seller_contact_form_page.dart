@@ -1,5 +1,7 @@
 import 'package:customsoft_exam/src/models/seller_contact_model.dart';
+import 'package:customsoft_exam/src/services/email/email_service.dart';
 import 'package:customsoft_exam/src/utils/utils.dart';
+import 'package:customsoft_exam/src/widgets/custom_dialogs.dart';
 import 'package:customsoft_exam/src/widgets/reactive_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:reactive_forms/reactive_forms.dart';
@@ -159,25 +161,31 @@ class _SellerContactFormPageState extends State<SellerContactFormPage> {
   }
 
   Future<void> sendMail() async {
+    CustomDialogs.showCircularProgress(context, message: "Enviando correo");
+
     String name = formValidation.name;
     String email = formValidation.email;
     String message = formValidation.message;
 
-    String subject = 'CONTACTO - ANUNCIOS EMPRESARIAL';
-    String body =
-        """SE RECIBIO UN COMENTARIO DESDE EL SISTEMA DE ANUNCIOS EMPRESARIALES CON LA SIGUIENTE INFORMACÓN DE CONTACTO
-        
-        NOMBRE: $name
-        CORREO CONTACTO: $email
-        MENSAJE:
-        $message""";
-
-    //TODO: external app or api mailing
-    await LaunchService.sendMail(
-      'callme.delivery.app@gmail.com',
-      subject: subject,
-      body: body,
+    bool mailSent = await EmailSerivce.sendBasicEmail(
+      EmailData(
+        emailTo: widget.sellerContactModel.email,
+        contact: FormContact(email: email, name: name, message: message),
+      ),
     );
+
+    Navigator.pop(context);
+
+    if (mailSent) {
+      formValidation.messageForm.reset();
+      CustomDialogs.showInfo(context,
+          title: "Correo enviado",
+          message: "Pronto estarán en contacto contigo");
+    } else {
+      CustomDialogs.showInfo(context,
+          title: "Ha ocurrido un error",
+          message: "Su correo no pudo ser enviado, inténtelo mas tarde.");
+    }
   }
 }
 

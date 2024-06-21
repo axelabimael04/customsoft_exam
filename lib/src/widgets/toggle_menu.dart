@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-class ToggleMenu extends StatefulWidget {
-  final List<ToggleItem> items;
-  const ToggleMenu({super.key, required this.items});
+class ToggleMenu<T> extends StatefulWidget {
+  final List<ToggleItem<T>> items;
+  final void Function(ToggleItem value) onChanged;
+  const ToggleMenu({super.key, required this.items, required this.onChanged});
 
   @override
   State<ToggleMenu> createState() => _ToggleMenuState();
@@ -17,10 +18,12 @@ class _ToggleMenuState extends State<ToggleMenu> {
             widget.items.length;
         return ToggleButtons(
           onPressed: (int index) {
-            for (int i = 0; i < widget.items.length; i++)
-              setState(() {
+            setState(() {
+              for (int i = 0; i < widget.items.length; i++) {
                 widget.items[i].isSelected = i == index;
-              });
+              }
+            });
+            widget.onChanged(widget.items[index]);
           },
           constraints: BoxConstraints(
             minHeight: 40.0,
@@ -35,9 +38,14 @@ class _ToggleMenuState extends State<ToggleMenu> {
   }
 }
 
-class ToggleItem {
+class ToggleItem<T> {
   final String title;
   bool isSelected;
+  final T value;
 
-  ToggleItem({required this.title, this.isSelected = false});
+  ToggleItem({
+    required this.title,
+    this.isSelected = false,
+    required this.value,
+  });
 }
